@@ -1,5 +1,6 @@
 from copy import deepcopy
 import math
+
 import State
         
 
@@ -108,7 +109,7 @@ def check_termination(state:State):
     
     return is_consistent(state) and is_assignment_complete(state)
 
-def backTrack(state):
+def simple_backtrack(state):
     if is_assignment_complete(state): return state
     unassigned = []
     for i in range(0,state.size):
@@ -120,8 +121,209 @@ def backTrack(state):
         local_state = deepcopy(state)
         local_state.board[first.x][first.y].value = d
         if is_consistent(local_state):
-            result = backTrack(local_state)
+            result = simple_backtrack(local_state)
             if result is not None:
                 return result
     return None
+
+def modified_backtrack(state):
+    if is_assignment_complete(state): return state
+    variable = None
+    #MRV
+    #first look for single domain vars
+    for i in range(state.size):
+        for j in range(state.size):
+            cell = state.board[i][j]
+            if(cell.value == '_'):
+                if(cell.domain == ['w'] or cell.domain == ['b']):
+                    variable = deepcopy(cell)
+                    break
+        else:
+            continue
+        break
+    #if we didnt find single domain var, choose first unassigned
+    if variable is None:
+        for i in range(state.size):
+            for j in range(state.size):
+                cell = state.board[i][j]
+                if(cell.value == '_'):
+                    variable = deepcopy(cell)
+                    break
+            else:
+                continue
+            break
+    #LCV
+    #if its single domained, we cant do anything different
+    if variable.domain == ['b'] or variable.domain == ['w']:
+        d = variable.domain[0]
+        local_state = deepcopy(state)
+        local_state.board[variable.x][variable.y].value = d
+        new_state = forward_checking(local_state,variable)
+        if (is_consistent(new_state)):
+            result = modified_backtrack(new_state)
+            if result is not None:
+                return result
+        
+    
+    #if its double domained, check corresponding row and column, if it has more whites than blacks,reverse the domain
+    row = variable.x
+    column = variable.y
+    white_colored = 0
+    black_colored = 0
+    for c in range(state.size):
+        cell = state.board[row][c]
+        if cell.value == 'w' or cell.value == 'W':
+            white_colored += 1
+        elif cell.value == 'b' or cell.value == 'B':
+            black_colored += 1
+    for r in range(state.size):
+        cell = state.board[r][column]
+        if cell.value == 'w' or cell.value == 'W':
+            white_colored += 1
+        elif cell.value == 'b' or cell.value == 'B':
+            black_colored += 1
+    if white_colored > black_colored:
+        variable.domain.reverse()
+    for d in variable.domain:
+        local_state = deepcopy(state)
+        local_state.board[variable.x][variable.y].value = d
+        new_state = forward_checking(local_state,variable)
+        if (is_consistent(new_state)):
+            result = modified_backtrack(new_state)
+            if result is not None:
+                return result
+    return None
+
+
+
+def forward_checking(state, variable):
+    local_state = deepcopy(state)
+    row = variable.x
+    column = variable.y
+
+    # if we have half of same color, other half must be other color
+
+    #go column-wise
+    white_colored = 0
+    black_colored = 0
+    for c in range(0,local_state.size):
+        color = local_state.board[row][c].value
+        if color == 'w' or 'W':
+            white_colored += 1
+        elif color == 'b' or 'B':
+            black_colored += 1
+    if white_colored == local_state.size / 2:
+        for c in range(0,local_state.size):
+            cell = local_state.board[row][c]
+            if cell.value == '_':
+                cell.value = 'b'
+    elif black_colored == local_state.size /2:
+        for c in range(0,local_state.size):
+            cell = local_state.board[row][c]
+            if cell.value == '_' :
+               cell.value = 'w'
+
+    #go row-wise
+    white_colored = 0
+    black_colored = 0
+    for r in range(0,local_state.size):
+        color = local_state.board[r][column].value
+        if color == 'w' or 'W':
+            white_colored += 1
+        elif color == 'b' or 'B':
+            black_colored += 1
+    if white_colored == local_state.size / 2:
+        for r in range(0,local_state.size):
+            cell = local_state.board[r][column]
+            if cell.value == '_':
+               cell.value = 'b'
+    elif black_colored == local_state.size /2:
+        for r in range(0,local_state.size):
+            cell = local_state.board[r][column]
+            if cell.value == '_':
+                cell.value = 'w'
+
+    # if we have two neighbours of same color, surronding variables must be of the other color
+
+    # go column-wise
+    current_cell = 'n'
+    next_cell = 'n'
+    for c in range(0,local_state.size):
+        color = local_state.board[row][c].value
+        current_cell = next_cell
+        next_cell = color
+        
+        if (current_cell.lower() == next_cell.lower()):
+            if (current_cell == 'w' or current_cell =='W'):
+                try:
+                    cell = local_state.board[row][c-2]
+                    if cell.value == '_':
+                        cell.value = 'b'
+                except:
+                    pass
+                try:
+                    cell = local_state.board[row][c+1]
+                    if cell.value == '_':
+                       cell.value = 'b'
+                except:
+                    pass
+            elif (current_cell == 'b' or current_cell == 'B'):
+                try:
+                    cell = local_state.board[row][c-2]
+                    if cell.value == '_':
+                       cell.value = 'w'
+                except:
+                    pass
+                try:
+                    cell = local_state.board[row][c+1]
+                    if cell.value == '_':
+                        cell.value = 'w'
+                except:
+                    pass
+        
+
+    # go row_wise
+    current_cell = 'n'
+    next_cell = 'n'
+    for r in range(0,local_state.size):
+        color = local_state.board[r][column].value
+        current_cell = next_cell
+        next_cell = color
+        if (current_cell.lower() == next_cell.lower()):
+            if (current_cell == 'w' or current_cell == 'W'):
+                try:
+                    cell = local_state.board[r-2][column]
+                    if cell.value == '_':
+                        cell.value = 'b'
+                except:
+                    pass
+                try:
+                    cell = local_state.board[r+1][column]
+                    if cell.value == '_':
+                        cell.value = 'b'
+                except:
+                    pass
+            elif (current_cell == 'b' or current_cell == 'B'):
+                try:
+                    cell = local_state.board[r-2][column]
+                    if cell.value == '_':
+                        cell.value = 'w'
+                except:
+                    pass
+                try:
+                    cell = local_state.board[r+1][column]
+                    if cell.value == '_':
+                       cell.value = 'w'
+                except:
+                    pass
+    return local_state
+
+def check_domain_is_empty(state):
+    for i in range(state.size):
+        for j in range(state.size):
+            if not state.board[i][j].domain:
+                return True
+    return False
+
+
 

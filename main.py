@@ -5,7 +5,7 @@ from State import *
 ## w b  
 def main():
     input_numbers = []  ## first row = size of puzzle(n)  ## second row = number of cells that have color in the statrt  (m)  ## row 3 to row 3+m : 
-    input=open("inputs/input1.txt").readlines()
+    input=open("inputs/input2.txt").readlines()
     for line in input:
         line = line.rstrip()
         numbers = line.split(' ')
@@ -21,7 +21,8 @@ def main():
         for j in range(0,size_puzzle):
             cell = Cell(i,j)
             row.append(cell)
-        board.append(row) 
+        board.append(row)
+
    
     for i in range(2,len(input_numbers)) :
         
@@ -37,11 +38,20 @@ def main():
     state = State(size_puzzle,board)  
     print('initial board:')
     state.print_board()
+
     start_time =time()
-    print('Final board:')
-    backTrack(state).print_board()
+    print('Solved with simple_backtrack:')
+    simple_backtrack(state).print_board()
     end_time= time()
     print('time: ',end_time-start_time)
+
+    start_time =time()
+    print('Solved with modified_backtrack:')
+    modified_backtrack(state).print_board()
+    end_time= time()
+    print('time: ',end_time-start_time)
+
+
 
 
 
