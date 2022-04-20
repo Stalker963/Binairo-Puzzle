@@ -50,6 +50,7 @@ def main():
     modified_backtrack(state).print_board()
     end_time= time()
     print('time: ',end_time-start_time)
+    
 
 
 

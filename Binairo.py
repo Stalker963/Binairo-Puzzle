@@ -1,6 +1,5 @@
 from copy import deepcopy
-import math
-
+from collections import deque
 import State
         
 
@@ -194,8 +193,6 @@ def modified_backtrack(state):
                 return result
     return None
 
-
-
 def forward_checking(state, variable):
     local_state = deepcopy(state)
     row = variable.x
@@ -325,5 +322,54 @@ def check_domain_is_empty(state):
                 return True
     return False
 
+def AC3(state): #does not do anything useful for this problem!
+    local_state = deepcopy(state)
+    q = deque()
+
+    #initialize the queue
+    for i in range(state.size):
+        for j in range(state.size):
+            cell = local_state.board[i][j]
+            if cell.value == '_':
+                for c in range(state.size):
+                    if c != j:
+                        q.append((cell,local_state.board[i][c]))
+                for r in range(state.size):
+                    if r != i:
+                        q.append((cell,local_state.board[r][j]))
+    while q:
+        arc = q.popleft()
+        first_cell = arc[0]
+        second_cell = arc[1]
+        if first_cell.value == '_':
+            for d in first_cell.domain:
+                new_state = deepcopy(state)
+                new_state.board[first_cell.x][first_cell.y].value = d
+                not_consistent_with_all = True
+                if second_cell.value == '_':
+                    for d2 in second_cell.domain:
+                        new_state.board[second_cell.x][second_cell.y].value = d2
+                        if is_consistent(new_state):
+                            not_consistent_with_all = False
+                            break
+                else:
+                    if is_consistent(new_state):
+                            not_consistent_with_all = False
+                if not_consistent_with_all:
+                    if len(first_cell.domain) == 1: #domain will get empty and return failure
+                        return False
+                    first_cell.domain.remove(d)
+                    first_cell.value = first_cell.domain[0]
+                    #add to queue every relating cell to first cell
+                    for c in range(state.size):
+                        if c != first_cell.y:
+                            q.append((local_state.board[first_cell.x][c],first_cell))
+                    for r in range(state.size):
+                        if r != first_cell.x:
+                            q.append((local_state.board[r][first_cell.y],first_cell))
+        return local_state
+
+
+        
 
 
